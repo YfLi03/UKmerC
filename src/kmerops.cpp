@@ -14,13 +14,13 @@ void print_kmer_histogram(const KmerList& kmerlist) {
     #if LOG_LEVEL >= 2
 
     Logger logger;
-    int maxcount = std::accumulate(kmerlist.cbegin(), kmerlist.cend(), 0, [](int cur, const auto& entry) { return std::max(cur, std::get<3>(entry)); });
+    int maxcount = std::accumulate(kmerlist.cbegin(), kmerlist.cend(), 0, [](int cur, const auto& entry) { return std::max(cur, std::get<1>(entry)); });
 
     std::vector<int> histo(maxcount+1, 0);
 
     for(size_t i = 0; i < kmerlist.size(); ++i)
     {
-        int cnt = std::get<3>(kmerlist[i]);
+        int cnt = std::get<1>(kmerlist[i]);
         assert(cnt >= 1);
         histo[cnt]++;
     }
@@ -185,7 +185,6 @@ filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, int thr_per_task )
         int tid = omp_get_thread_num();
     #endif
 
-
         kmerlists[tid].reserve(uint64_t(task_seedcnt[tid] / LOWER_KMER_FREQ));    // This should be enough
         TKmer last_mer = (*recv_kmerseeds)[tid][0].kmer;
         uint64_t cur_kmer_cnt = 1;
@@ -202,17 +201,10 @@ filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, int thr_per_task )
                     KmerListEntry& entry    = kmerlists[tid].back();
 
                     TKmer& kmer             = std::get<0>(entry);
-                    READIDS& readids        = std::get<1>(entry);
-                    POSITIONS& positions    = std::get<2>(entry);
-                    int& count              = std::get<3>(entry);
+                    int& count              = std::get<1>(entry);
 
                     count = cur_kmer_cnt;
                     kmer = last_mer;
-
-                    for (size_t j = idx - count; j < idx; j++) {
-                        readids[j - idx + count] = (*recv_kmerseeds)[tid][j].readid;
-                        positions[j - idx + count] = (*recv_kmerseeds)[tid][j].posinread;
-                    }
 
                     valid_kmer[tid]++;
                 }
@@ -228,18 +220,10 @@ filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, int thr_per_task )
             KmerListEntry& entry         = kmerlists[tid].back();
 
             TKmer& kmer             = std::get<0>(entry);
-            READIDS& readids        = std::get<1>(entry);
-            POSITIONS& positions    = std::get<2>(entry);
-            int& count              = std::get<3>(entry);
+            int& count              = std::get<1>(entry);
 
             count = cur_kmer_cnt;
             kmer = last_mer;
-
-            for (size_t j = task_seedcnt[tid] - count; j < task_seedcnt[tid]; j++) {
-                readids[j - task_seedcnt[tid] + count] = (*recv_kmerseeds)[tid][j].readid;
-                positions[j - task_seedcnt[tid] + count] = (*recv_kmerseeds)[tid][j].posinread;
-            }
-
             valid_kmer[tid]++;
         }
     }

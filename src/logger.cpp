@@ -18,9 +18,9 @@ void Logger::flush(char const *label)
     std::string slabel(label);
     std::string banner;
     banner.assign(slabel.size(), '=');
-    std::cout << slabel << "\n" << banner << "\n" << std::endl;
+    std::cout << "[Logger]" << slabel << "\n    ";
     std::string str = logstream->str();
-    std::cout << str << std::endl;
+    std::cout << str << std::endl << std::endl;
     logstream.reset(new std::ostringstream());
 }
 

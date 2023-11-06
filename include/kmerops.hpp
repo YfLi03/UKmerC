@@ -15,12 +15,11 @@ typedef  int64_t ReadId;
 typedef std::array<PosInRead, UPPER_KMER_FREQ> POSITIONS;
 typedef std::array<ReadId,    UPPER_KMER_FREQ> READIDS;
 
-typedef std::tuple<TKmer, READIDS, POSITIONS, int> KmerListEntry;
+typedef std::tuple<TKmer, int> KmerListEntry;
 typedef std::vector<KmerListEntry> KmerList;
 
 #define DEFAULT_THREAD_PER_TASK 4
 #define MAX_THREAD_MEMORY_BOUNDED 8
-#define MAX_SEND_BATCH 1000000
 
 /* 
  * Some explanations about these vars and recommended settings:
@@ -32,15 +31,13 @@ typedef std::vector<KmerListEntry> KmerList;
 
 
 struct KmerSeedStruct{
-    TKmer kmer;      
-    ReadId readid;
-    PosInRead posinread;
+    TKmer kmer; 
 
-    KmerSeedStruct(TKmer kmer, ReadId readid, PosInRead posinread) : kmer(kmer), readid(readid), posinread(posinread) {};
-    KmerSeedStruct(const KmerSeedStruct& o) : kmer(o.kmer), readid(o.readid), posinread(o.posinread) {};
+    KmerSeedStruct(TKmer kmer) : kmer(kmer) {};
+    KmerSeedStruct(const KmerSeedStruct& o) : kmer(o.kmer) {};
     // KmerSeedStruct(const KmerSeed& o) : kmer(std::get<0>(o)), readid(std::get<1>(o)), posinread(std::get<2>(o)) {};
     KmerSeedStruct(KmerSeedStruct&& o) :    // yfli: Not sure if it's appropriate to use std::move() here
-        kmer(std::move(o.kmer)), readid(std::move(o.readid)), posinread(std::move(o.posinread)) {};
+        kmer(std::move(o.kmer)) {};
     KmerSeedStruct() {};
 
     int GetByte(int &i) const
@@ -66,8 +63,6 @@ struct KmerSeedStruct{
     KmerSeedStruct& operator=(const KmerSeedStruct& o)
     {
         kmer = o.kmer;
-        readid = o.readid;
-        posinread = o.posinread;
         return *this;
     }
 };
@@ -96,9 +91,9 @@ struct KmerParserHandler
 
     KmerParserHandler(std::vector<std::vector<KmerSeedStruct>>& kmerseeds) : ntasks(kmerseeds.size()), kmerseeds(kmerseeds) {}
 
-    void operator()(const TKmer& kmer, size_t kid, size_t rid)
+    void operator()(const TKmer& kmer)
     {
-        kmerseeds[GetKmerOwner(kmer, ntasks)].emplace_back(kmer, static_cast<ReadId>(rid), static_cast<PosInRead>(kid));
+        kmerseeds[GetKmerOwner(kmer, ntasks)].emplace_back(kmer);
     }
 };
 
@@ -123,7 +118,7 @@ void ForeachKmerParallel(const DnaBuffer& myreads, std::vector<KmerHandler>& han
 
         for (auto meritr = repmers.begin(); meritr != repmers.end(); ++meritr, ++j)
         {
-            handlers[tid](*meritr, j, i);
+            handlers[tid](*meritr);
         }
     }
 }
