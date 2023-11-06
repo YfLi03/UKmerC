@@ -1,12 +1,13 @@
-#ifndef KMEROPS_H_
-#define KMEROPS_H_
+#ifndef KMEROPS_HPP
+#define KMEROPS_HPP
 
 #include "kmer.hpp"
 #include "timer.hpp"
 #include "dnaseq.hpp"
 #include "dnabuffer.hpp"
 #include "logger.hpp"
-#include "compiletime.h"
+#include <omp.h>
+
 
 typedef uint32_t PosInRead;
 typedef  int64_t ReadId;
@@ -17,13 +18,18 @@ typedef std::array<ReadId,    UPPER_KMER_FREQ> READIDS;
 typedef std::tuple<TKmer, READIDS, POSITIONS, int> KmerListEntry;
 typedef std::vector<KmerListEntry> KmerList;
 
-/* thread count used for sending and receiving for each upcxx process */
-#define THREADCNT_SEND 4
-#define THREADCNT_RECV 1
-/* send buffer in bytes */
-#define BATCH_SIZE 100000
-/* thread count used for (openmp) radix sort. this will determine the task count */
 #define DEFAULT_THREAD_PER_TASK 4
+#define MAX_THREAD_MEMORY_BOUNDED 8
+#define MAX_SEND_BATCH 1000000
+
+/* 
+ * Some explanations about these vars and recommended settings:
+ * it's suggested to set number of MPI ranks per nodes as the count of NUMA nodes
+ * under such setting, the memory bandwidth is not shared between MPI ranks
+ * MAX_THREAD_MEMORY_BOUNDED_EXTREME is the count of memory controller per NUMA node ( for perlmutter, it is 2 )
+ * For thr other vars, i don't have a good explanation for them currently
+ */
+
 
 struct KmerSeedStruct{
     TKmer kmer;      
@@ -32,14 +38,30 @@ struct KmerSeedStruct{
 
     KmerSeedStruct(TKmer kmer, ReadId readid, PosInRead posinread) : kmer(kmer), readid(readid), posinread(posinread) {};
     KmerSeedStruct(const KmerSeedStruct& o) : kmer(o.kmer), readid(o.readid), posinread(o.posinread) {};
-    KmerSeedStruct(KmerSeedStruct&& o) :  
+    // KmerSeedStruct(const KmerSeed& o) : kmer(std::get<0>(o)), readid(std::get<1>(o)), posinread(std::get<2>(o)) {};
+    KmerSeedStruct(KmerSeedStruct&& o) :    // yfli: Not sure if it's appropriate to use std::move() here
         kmer(std::move(o.kmer)), readid(std::move(o.readid)), posinread(std::move(o.posinread)) {};
     KmerSeedStruct() {};
 
-    int GetByte(int &i) const { return kmer.getByte(i); }
-    bool operator < (const KmerSeedStruct& o) const { return kmer < o.kmer; }
-    bool operator == (const KmerSeedStruct& o) const { return kmer == o.kmer; }
-    bool operator != (const KmerSeedStruct& o) const { return kmer != o.kmer; }
+    int GetByte(int &i) const
+    {
+        return kmer.getByte(i);
+    }
+
+    bool operator<(const KmerSeedStruct& o) const
+    {
+        return kmer < o.kmer;
+    }
+
+    bool operator==(const KmerSeedStruct& o) const
+    {
+        return kmer == o.kmer;
+    }
+
+    bool operator!=(const KmerSeedStruct& o) const
+    {
+        return kmer != o.kmer;
+    }
 
     KmerSeedStruct& operator=(const KmerSeedStruct& o)
     {
@@ -53,73 +75,57 @@ struct KmerSeedStruct{
 typedef std::vector<std::vector<KmerSeedStruct>> KmerSeedBuckets;
 typedef std::vector<std::vector<std::vector<KmerSeedStruct>>> KmerSeedVecs;
 
-void store_into_local(const int& tid, const size_t& buf_sz, 
-    const upcxx::view<uint8_t>& buf_in_rpc, const bool last_send);
 
-std::unique_ptr<KmerSeedBuckets> exchange_kmer(const DnaBuffer& myreads,
+std::unique_ptr<KmerSeedBuckets> 
+exchange_kmer(const DnaBuffer& myreads,
+     int thr_per_task = DEFAULT_THREAD_PER_TASK,
+     int max_thr_membounded = MAX_THREAD_MEMORY_BOUNDED);
+
+std::unique_ptr<KmerList>
+filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, 
      int thr_per_task = DEFAULT_THREAD_PER_TASK);
 
-std::unique_ptr<KmerList> filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, 
-     int thr_per_task = DEFAULT_THREAD_PER_TASK);
-
-int GetKmerOwner(const TKmer& kmer, int nprocs);
+int GetKmerOwner(const TKmer& kmer, int ntasks);
 
 void print_kmer_histogram(const KmerList& kmerlist);
 
-
-class KmerParserHandler
+struct KmerParserHandler
 {
-    int nprocs;
     int ntasks;
+    std::vector<std::vector<KmerSeedStruct>>& kmerseeds;
 
-    size_t batch_sz;
-    ReadId readoffset;
+    KmerParserHandler(std::vector<std::vector<KmerSeedStruct>>& kmerseeds) : ntasks(kmerseeds.size()), kmerseeds(kmerseeds) {}
 
-    std::vector<std::vector<uint8_t>> sendbufs;
-    std::vector<size_t> buf_sz;
-    upcxx::future<> futures;
-
-    int cnt;
-    double time_tot;
-    
-    void encode(std::vector<uint8_t>& t, const TKmer& kmer, PosInRead posinread, ReadId readid, size_t& buf_sz);
-    upcxx::future<> send(int dst, bool last_send = false);
-
-public:
-    KmerParserHandler(int ntasks, int nprocs, size_t batch_sz, ReadId readoffset) : 
-        ntasks(ntasks), nprocs(nprocs), readoffset(readoffset), batch_sz(batch_sz) {
-            buf_sz.resize(nprocs * ntasks);
-            sendbufs.resize(nprocs * ntasks);
-            for (std::vector<uint8_t>& buf : sendbufs) {
-                buf.resize(batch_sz + sizeof(TKmer) + sizeof(ReadId) + sizeof(PosInRead));
-            }
-            futures = upcxx::make_future();
-        }
-
-
-    /* send all the remaining in the buffer and wait for all sends to complete */
-    void wait();
-    void operator()(const TKmer& kmer, size_t kid, size_t rid);
-    void data() {
-        std::cout << "total send count: " << cnt << std::endl;
-        std::cout << "avg time for calling rpc" << time_tot / cnt<< std::endl;
+    void operator()(const TKmer& kmer, size_t kid, size_t rid)
+    {
+        kmerseeds[GetKmerOwner(kmer, ntasks)].emplace_back(kmer, static_cast<ReadId>(rid), static_cast<PosInRead>(kid));
     }
 };
 
-template <typename KmerHandler>
-void ForeachKmer(const DnaBuffer& myreads, KmerHandler& handler, size_t st, size_t ed) {
-    size_t i;
 
-    for (i = st; i < ed; ++i) {
+template <typename KmerHandler>
+void ForeachKmerParallel(const DnaBuffer& myreads, std::vector<KmerHandler>& handlers, int nthreads)
+{
+    assert(nthreads > 0);
+
+    /* cosidering the NUMA effect, we may want the vecs to be NUMA-local*/
+    #pragma omp parallel for num_threads(nthreads) 
+    for (size_t i = 0; i < myreads.size(); ++i)
+    {
+        int tid = omp_get_thread_num();
+
         if (myreads[i].size() < KMER_SIZE)
             continue;
 
         std::vector<TKmer> repmers = TKmer::GetRepKmers(myreads[i]);
+
         size_t j = 0;
-        for (auto meritr = repmers.begin(); meritr != repmers.end(); ++meritr, ++j) {
-            handler(*meritr, j, i);
+
+        for (auto meritr = repmers.begin(); meritr != repmers.end(); ++meritr, ++j)
+        {
+            handlers[tid](*meritr, j, i);
         }
     }
 }
 
-#endif // KMEROPS_H_
+#endif // KMEROPS_HPP

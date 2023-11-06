@@ -12,9 +12,9 @@ else
 OPT+=-O3
 endif
 
-FLAGS=$(OPT) $(COMPILE_TIME_PARAMETERS) -threadmode=par -DTHREADED -fopenmp -Wall -std=c++17 -I./include -I./src
+FLAGS=$(OPT) $(COMPILE_TIME_PARAMETERS) -DTHREADED -fopenmp -Wall -std=c++17 -I./include -I./src
 
-COMPILER=upcxx
+COMPILER=CC
 
 OBJECTS=obj/logger.o \
 		obj/timer.o \

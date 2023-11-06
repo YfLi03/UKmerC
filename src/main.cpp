@@ -1,5 +1,6 @@
 #include<iostream>
-#include<upcxx/upcxx.hpp>
+#include <iomanip>
+#include <sstream>
 
 #include "logger.hpp"
 #include "timer.hpp"
@@ -11,7 +12,6 @@
 std::string fasta_fname;
 
 int main(int argc, char **argv){
-    upcxx::init();
 
     Logger log;
     Timer timer;
@@ -50,6 +50,5 @@ int main(int argc, char **argv){
 
     print_kmer_histogram(*kmerlist);
 
-    upcxx::finalize();
     return 0;
 }
