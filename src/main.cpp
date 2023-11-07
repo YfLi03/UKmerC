@@ -41,7 +41,7 @@ int main(int argc, char **argv){
     ss.clear(); ss.str("");
 
     timer.start();
-    auto bucket = exchange_kmer(mydna);
+    auto bucket = extract_kmer(mydna);
     timer.stop_and_log("exchange_kmer");
 
     timer.start();
