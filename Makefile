@@ -31,12 +31,12 @@ install: ukmerc
 	cp ukmerc $(HOME)/bin
 
 ukmerc: obj/main.o $(OBJECTS)
-	@echo $(COMPILER) $(FLAGS) -c -o $@ $^
+#	@echo $(COMPILER) $(FLAGS) -c -o $@ $^
 	$(COMPILER) $(FLAGS) -o $@ $^
 
 obj/%.o: src/%.cpp
 	@mkdir -p $(@D)
-	@echo $(COMPILER) $(FLAGS) -c -o $@ $<
+#	@echo $(COMPILER) $(FLAGS) -c -o $@ $<
 	$(COMPILER) $(FLAGS) -c -o $@ $<
 
 obj/main.o: src/main.cpp include/logger.hpp include/timer.hpp include/dnaseq.hpp include/dnabuffer.hpp include/fastaindex.hpp include/kmerops.hpp

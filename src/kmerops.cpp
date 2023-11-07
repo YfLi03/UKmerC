@@ -25,7 +25,7 @@ void print_kmer_histogram(const KmerList& kmerlist) {
 
     std::cout << "#count\tnumkmers" << std::endl;
 
-    for (int i = 1; i < histo.size(); ++i)
+    for (size_t i = 1; i < histo.size(); ++i)
     {
         if (histo[i] > 0)
         {
@@ -41,7 +41,7 @@ int GetKmerOwner(const TKmer& kmer, int ntasks) {
     uint64_t myhash = kmer.GetHash();
     double range = static_cast<double>(myhash) * static_cast<double>(ntasks);
     size_t owner = range / std::numeric_limits<uint64_t>::max();
-    assert(owner >= 0 && owner < static_cast<int>(ntasks));
+    assert(owner >= 0 && owner < static_cast<size_t>(ntasks));
     return static_cast<int>(owner);
 }
 
@@ -50,8 +50,6 @@ extract_kmer(const DnaBuffer& myreads)
 {
     Logger logger;
     std::ostringstream rootlog;
-
-    size_t numreads = myreads.size();
 
     KmerSeedBucket* kmerseeds = new KmerSeedBucket;
     KmerParserHandler handler(*kmerseeds);

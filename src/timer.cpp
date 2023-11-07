@@ -18,5 +18,5 @@ void Timer::stop_and_log(char const *label)
     t = elapsed.count();
 
     std::cout << "[Timer] " << label << ":\n";
-    std::cout << "    time elapsed : " << std::fixed << std::setprecision(3) << t << "\n\n";
+    std::cout << "    time elapsed : " << std::fixed << std::setprecision(3) << t << "\n\n" << std::flush;
 }

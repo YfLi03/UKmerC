@@ -158,7 +158,7 @@ std::string Kmer<NLONGS>::GetString() const
 template <int NLONGS>
 void Kmer<NLONGS>::set_kmer(const DnaSeq& s)
 {
-    int i, j, l, idx;
+    int i, j, l;
     uint64_t code;
 
     /*

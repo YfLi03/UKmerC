@@ -72,7 +72,6 @@ DnaBuffer FastaIndex::getmydna() const
     auto readlens = getmyreadlens(); /* vector of local read lengths */
     size_t bufsize = DnaBuffer::computebufsize(readlens); /* minimum number of bytes needed to 2-bit encode all the local reads */
     DnaBuffer dnabuf(bufsize); /* initialize dnabuf by allocating @bufsize bytes */
-    size_t numreads = readlens.size(); /* number of local reads */
 
     uint64_t startpos; /* the FASTA position that starts my local chunk of reads */
     uint64_t endpos; /* the FASTA position that ends my local chunk of reads (exclusive) */
