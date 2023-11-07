@@ -76,7 +76,6 @@ void ForeachKmer(const DnaBuffer& myreads, KmerHandler& handler)
 {
     for (size_t i = 0; i < myreads.size(); ++i)
     {
-
         if (myreads[i].size() < KMER_SIZE)
             continue;
 

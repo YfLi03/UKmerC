@@ -55,7 +55,6 @@ extract_kmer(const DnaBuffer& myreads)
 
     KmerSeedBucket* kmerseeds = new KmerSeedBucket;
     KmerParserHandler handler(*kmerseeds);
-
     ForeachKmer(myreads, handler);
 
     return std::unique_ptr<KmerSeedBucket>(kmerseeds);
@@ -69,19 +68,24 @@ filter_kmer(std::unique_ptr<KmerSeedBucket>& kmerseeds)
     Logger logger;
     std::ostringstream rootlog;
 
+    /* sort the kmerseeds, so that kmers with the same value fall in adjacent locations */
     std::sort(kmerseeds->begin(), kmerseeds->end());
 
+
+    /* do a linear scan to filter out the valid kmers */
     uint64_t valid_kmer = 0;
     KmerList* kmerlist = new KmerList();
     
     TKmer last_mer = (*kmerseeds)[0].kmer;
     uint64_t cur_kmer_cnt = 1;
 
-    for(size_t idx = 1; idx < (*kmerseeds).size(); idx++) {
+    for(size_t idx = 1; idx < (*kmerseeds).size(); idx++) 
+    {
         TKmer cur_mer = (*kmerseeds)[idx].kmer;
         if (cur_mer == last_mer) {
             cur_kmer_cnt++;
         } else {
+            /* the next kmer has different value from the current one, so we have gone through all kmers of the current value */
             if (cur_kmer_cnt >= LOWER_KMER_FREQ && cur_kmer_cnt <= UPPER_KMER_FREQ) {
 
                 kmerlist->push_back(KmerListEntry());
