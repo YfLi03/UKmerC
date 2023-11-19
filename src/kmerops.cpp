@@ -53,6 +53,7 @@ exchange_kmer(const DnaBuffer& myreads,
     logger.flush("Task num:");
     logger() << nthr_membounded ;
     logger.flush("Thread count used for memory bounded operations:");
+    memchecker memchk(nprocs, myrank);
     #endif
 
     #if LOG_LEVEL >= 3
@@ -191,6 +192,10 @@ exchange_kmer(const DnaBuffer& myreads,
     ss.clear();
     print_mem_log(nprocs, myrank, "After storing (not deleting buffers)");
     bsender.print_results(logger);
+    #endif
+
+    #if LOG_LEVEL >= 2
+    memchk.log("After kmer exchange (not deleting buffers)");
     #endif
 
     return std::unique_ptr<KmerSeedBuckets>(recv_kmerseeds);
