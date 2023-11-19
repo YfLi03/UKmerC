@@ -100,6 +100,10 @@ exchange_kmer(const DnaBuffer& myreads,
     Timer timer();
     #endif
 
+    #if LOG_LEVEL >= 2
+    memchecker memcheck(upcxx::rank_n(), upcxx::rank_me());
+    #endif
+
     int myrank = upcxx::rank_me();
     int nprocs = upcxx::rank_n();
     bool single_node = (nprocs == 1);
@@ -244,6 +248,9 @@ exchange_kmer(const DnaBuffer& myreads,
         }
     }
 
+    #if LOG_LEVEL >= 2
+    memcheck.log("After exchange_kmer");
+    #endif
 
     return std::unique_ptr<KmerSeedBuckets>(bucket);
 }

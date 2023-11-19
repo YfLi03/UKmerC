@@ -23,6 +23,7 @@ OBJECTS=obj/logger.o \
 		obj/fastaindex.o \
 		obj/hashfuncs.o \
 		obj/kmerops.o \
+		obj/memcheck.o
 
 
 all: ukmerc
@@ -39,7 +40,7 @@ obj/%.o: src/%.cpp
 	@echo $(COMPILER) $(FLAGS) -c -o $@ $<
 	$(COMPILER) $(FLAGS) -c -o $@ $<
 
-obj/main.o: src/main.cpp include/logger.hpp include/timer.hpp include/dnaseq.hpp include/dnabuffer.hpp include/fastaindex.hpp include/kmerops.hpp
+obj/main.o: src/main.cpp include/logger.hpp include/timer.hpp include/dnaseq.hpp include/dnabuffer.hpp include/fastaindex.hpp include/kmerops.hpp include/memcheck.hpp
 obj/logger.o: src/logger.cpp include/logger.hpp
 obj/timer.o: src/timer.cpp include/timer.hpp
 obj/dnaseq.o: src/dnaseq.cpp include/dnaseq.hpp
@@ -47,6 +48,7 @@ obj/dnabuffer.o: src/dnabuffer.cpp include/dnabuffer.hpp include/dnaseq.hpp
 obj/fastaindex.o: src/fastaindex.cpp include/fastaindex.hpp include/dnaseq.hpp include/dnabuffer.hpp
 obj/hashfuncs.o: src/hashfuncs.cpp include/hashfuncs.hpp
 obj/kmerops.o: src/kmerops.cpp include/kmerops.hpp include/kmer.hpp include/dnaseq.hpp include/logger.hpp include/timer.hpp include/dnabuffer.hpp include/paradissort.hpp include/memcheck.hpp
+obj/memcheck.o: src/memcheck.cpp include/memcheck.hpp
 
 clean:
 	rm -rf *.o obj/* ukmerc $(HOME)/bin/ukmerc

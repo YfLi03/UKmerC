@@ -1,14 +1,43 @@
-#include <sys/sysinfo.h>
+# ifndef MEMCHECK_HPP
+# define MEMCHECK_HPP
+
+#include <memory.h>
+#include <cstdio>
 #include <iostream>
+#include <string>
 
-void mem_check(){
-    struct sysinfo info;
-    sysinfo(&info);
-    long long total_ram = info.totalram * info.mem_unit;
-    long long free_ram = info.freeram * info.mem_unit;
-    long long available_ram = info.totalram * info.mem_unit;
+int get_cluster_memory_usage_kb(long* vmrss_per_process, long* vmsize_per_process, int root, int np);
+void get_mem(int nprocs, int myrank, size_t& vmrss, size_t& vmsize);
 
-    std::cout << "Total RAM: " << total_ram / (1024 * 1024) << " MB" << std::endl;
-    std::cout << "Free RAM: " << free_ram / (1024 * 1024) << " MB" << std::endl;
-    std::cout << "Available RAM: " << available_ram / (1024 * 1024) << " MB" << std::endl;
-}
+class memchecker{
+
+    size_t vmrss;
+    size_t vmsize;
+    int nprocs;
+    int myrank;
+
+public:
+    void init() {
+        get_mem(nprocs, myrank, vmrss, vmsize);
+    }
+
+    memchecker(int nprocs, int myrank) : nprocs(nprocs), myrank(myrank) {
+        init();
+    }
+
+    void log(std::string msg=std::string()) {
+        size_t vmrss_new;
+        size_t vmsize_new;
+        get_mem(nprocs, myrank, vmrss_new, vmsize_new);
+
+        if (myrank == 0) {
+            std::cout << msg << ": " << std::endl;
+            std::cout << "VmRSS: " << vmrss_new - vmrss << " GB" << std::endl;
+            std::cout << "VmSize: " << vmsize_new - vmsize << " GB" << std::endl;
+            std::cout << std::endl;
+        }
+
+    }
+};
+
+# endif
