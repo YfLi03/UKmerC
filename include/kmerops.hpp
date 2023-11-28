@@ -317,7 +317,7 @@ public:
         if (status != BATCH_SENDING) return 0;
 
         #if LOG_LEVEL >= 3
-        MPITimer timer(comm);
+        Timer timer(comm);
         timer.start();
         #endif
 
@@ -446,7 +446,7 @@ public:
     void store(uint8_t* recvbuf)
     {
         #if LOG_LEVEL >= 3
-        MPITimer timer(MPI_COMM_WORLD);
+        Timer timer(MPI_COMM_WORLD);
         timer.start();
         #endif
 
