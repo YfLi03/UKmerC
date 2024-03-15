@@ -11,6 +11,7 @@
 #include "dnabuffer.hpp"
 #include "logger.hpp"
 #include "compiletime.h"
+#include "supermer.hpp"
 
 typedef uint32_t PosInRead;
 typedef  int64_t ReadId;
@@ -745,30 +746,41 @@ void ForeachKmerParallel(const DnaBuffer& myreads, std::vector<KmerHandler>& han
     }
 }
 
+inline int GetMmerOwner(const TMmer& mmer, int nprocs) {
+    uint64_t myhash = mmer.GetHash();
+    double range = static_cast<double>(myhash) * static_cast<double>(nprocs);
+    size_t owner = range / std::numeric_limits<uint64_t>::max();
+    assert(owner >= 0 && owner < static_cast<int>(nprocs));
+    return static_cast<int>(owner);
+}
+
 struct Minimizer_Deque {
 
-    /* The first item is the hash value, the second one is the position of the minimizer */
-    std::deque<std::pair<uint64_t, int>> deq;
+    /* The first item is the raw value, the second one is the position of the minimizer, the third is the hash value if calculated, the fourth is dKmer*/
+    std::deque<std::tuple<uint64_t, int, int, TMmer>> deq;
+    int tot_tasks;
 
     void remove_minimizer(int pos) {
-        while (!deq.empty() && deq.front().second <= pos) {
+        while (!deq.empty() && std::get<1>(deq.front()) <= pos) {
             deq.pop_front();
         }
     }
 
-    void insert_minimizer(uint64_t hash, int pos) {
-        while (!deq.empty() && deq.back().first < hash) {
+    void insert_minimizer(uint64_t hash, int pos, int dst, TMmer mmer) {
+        while (!deq.empty() && std::get<0>(deq.back()) < hash) {
             deq.pop_back();
         }
-        deq.push_back(std::make_pair(hash, pos));
+        deq.push_back(std::make_tuple(hash, pos, dst, mmer));
     }
 
     uint64_t get_current_minimizer() {
-        return deq.front().first;
+        if(std::get<2>(deq.front())==1999999){
+            std::get<2>(deq.front()) = GetMmerOwner(std::get<3>(deq.front()), tot_tasks);
+        };
+        return std::get<2>(deq.front());
     }
 };
 
-int GetMinimizerOwner(const uint64_t& hash, int tot_tasks);
 
 void FindKmerDestinationsParallel(const DnaBuffer& myreads, int nthreads, int tot_tasks, ParallelData& data);
 

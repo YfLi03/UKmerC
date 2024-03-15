@@ -394,6 +394,9 @@ filter_kmer(std::unique_ptr<KmerSeedBuckets>& recv_kmerseeds, int thr_per_task)
     return std::unique_ptr<KmerList>(kmerlist);
 }
 
+inline int GetMmerOwner(const TMmer& mmer, int nprocs);
+
+
 void FindKmerDestinationsParallel(const DnaBuffer& myreads, int nthreads, int tot_tasks, ParallelData& data) {
     
     assert(nthreads > 0);
@@ -411,19 +414,20 @@ void FindKmerDestinationsParallel(const DnaBuffer& myreads, int nthreads, int to
         std::vector<TMmer> repmers = TMmer::GetRepMmers(myreads[i]);
 
         Minimizer_Deque deque;
+        deque.tot_tasks = tot_tasks;
         int head_pos = 0;
 
         /* initialize the deque */
         for(; head_pos < KMER_SIZE - MINIMIZER_SIZE; head_pos++) {
-            deque.insert_minimizer(repmers[head_pos].GetHash(), head_pos);
+            deque.insert_minimizer(repmers[head_pos].GetValue(), head_pos, 1999999, repmers[head_pos]);
         }
         int tail_pos = head_pos - KMER_SIZE + MINIMIZER_SIZE - 1;
 
         /* start the main loop */
         for(; head_pos < repmers.size(); head_pos++, tail_pos++) {
-            deque.insert_minimizer(repmers[head_pos].GetHash(), head_pos);
+            deque.insert_minimizer(repmers[head_pos].GetValue(), head_pos, 1999999, repmers[head_pos]);
             deque.remove_minimizer(tail_pos);
-            dest.push_back(GetMinimizerOwner(deque.get_current_minimizer(), tot_tasks));
+            dest.push_back(deque.get_current_minimizer());
         }
 
     }
@@ -443,6 +447,7 @@ inline int GetKmerOwner(const TKmer& kmer, int nprocs) {
     assert(owner >= 0 && owner < static_cast<int>(nprocs));
     return static_cast<int>(owner);
 }
+
 
 
 void print_kmer_histogram(const KmerList& kmerlist, MPI_Comm comm) {

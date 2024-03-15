@@ -48,6 +48,7 @@ public:
     Mmer GetRep() const;
 
     uint64_t GetHash() const;
+    uint64_t GetValue() const;
     const void* GetBytes() const { return reinterpret_cast<const void*>(longs.data()); }
     int getByte(int &i) const {
         return bytes[i];
@@ -307,6 +308,19 @@ uint64_t Mmer<MLONGS>::GetHash() const
 }
 
 template <int MLONGS>
+uint64_t Mmer<MLONGS>::GetValue() const
+{
+    uint64_t h;
+    h = longs[0];
+    if (MINIMIZER_SIZE <= 32) {
+        h = h >> (64 - MINIMIZER_SIZE * 2);
+    } else {
+        h = h + (longs[1]);
+    }
+    return h;
+}
+
+template <int MLONGS>
 std::vector<Mmer<MLONGS>> Mmer<MLONGS>::GetMmers(const DnaSeq& s)
 {
     int l = s.size();
@@ -334,7 +348,6 @@ std::vector<Mmer<MLONGS>> Mmer<MLONGS>::GetRepMmers(const DnaSeq& s)
     std::transform(kmers.begin(), kmers.end(), kmers.begin(), [](const Mmer& kmer) { return kmer.GetRep(); });
     return kmers;
 }
-
 
 using TMmer = typename std::conditional<(MINIMIZER_SIZE <= 32), Mmer<1>,
               typename std::conditional<(MINIMIZER_SIZE <= 64), Mmer<2>,

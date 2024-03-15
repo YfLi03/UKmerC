@@ -132,7 +132,7 @@ public:
     static uint8_t getcharcode(char c) { return codetab[(int)c]; }
     static char    getcharchar(char c) { return getcodechar(getcharcode(c)); }
 
-    static constexpr char chartab[4+1] = {'A', 'C', 'G', 'T', 'X'};
+    static constexpr char chartab[4+1] = {'C', 'A', 'T', 'G', 'X'};
     static constexpr uint8_t codetab[256] =
     {
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
